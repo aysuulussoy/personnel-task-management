@@ -25,6 +25,11 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.findAll());
     }
 
+    @GetMapping("/active")
+    public ResponseEntity<List<Employee>> findActiveEmployees() {
+        return ResponseEntity.ok(employeeService.findActiveEmployees());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Employee> findById(@PathVariable Long id) {
         return ResponseEntity.ok(employeeService.findById(id));
