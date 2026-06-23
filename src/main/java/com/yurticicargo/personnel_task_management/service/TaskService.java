@@ -4,6 +4,8 @@ import com.yurticicargo.personnel_task_management.entity.Employee;
 import com.yurticicargo.personnel_task_management.entity.Role;
 import com.yurticicargo.personnel_task_management.entity.Task;
 import com.yurticicargo.personnel_task_management.entity.TaskStatus;
+import com.yurticicargo.personnel_task_management.exception.ForbiddenOperationException;
+import com.yurticicargo.personnel_task_management.exception.ResourceNotFoundException;
 import com.yurticicargo.personnel_task_management.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,15 +27,15 @@ public class TaskService {
         Employee employee = employeeService.findById(employeeId);
 
         if (manager.getRole() != Role.MANAGER) {
-            throw new RuntimeException("Only managers can assign tasks.");
+            throw new ForbiddenOperationException("Only managers can assign tasks.");
         }
 
         if (Boolean.FALSE.equals(manager.getActive())) {
-            throw new RuntimeException("Inactive manager cannot assign tasks: " + managerId);
+            throw new ForbiddenOperationException("Inactive manager cannot assign tasks: " + managerId);
         }
 
         if (Boolean.FALSE.equals(employee.getActive())) {
-            throw new RuntimeException("Task cannot be assigned to an inactive employee: " + employeeId);
+            throw new ForbiddenOperationException("Task cannot be assigned to an inactive employee: " + employeeId);
         }
 
         task.setAssignedByManager(manager);
@@ -46,14 +48,14 @@ public class TaskService {
     @Transactional
     public Task updateStatus(Long taskId, Long employeeId, TaskStatus newStatus) {
         Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found: " + taskId));
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
 
         if (!task.getAssignedEmployee().getId().equals(employeeId)) {
-            throw new RuntimeException("Only the assigned employee can update this task.");
+            throw new ForbiddenOperationException("Only the assigned employee can update this task.");
         }
 
         if (Boolean.FALSE.equals(task.getAssignedEmployee().getActive())) {
-            throw new RuntimeException("Inactive employee cannot update task status: " + employeeId);
+            throw new ForbiddenOperationException("Inactive employee cannot update task status: " + employeeId);
         }
 
         if (newStatus == TaskStatus.COMPLETED && task.getCompletedAt() == null) {

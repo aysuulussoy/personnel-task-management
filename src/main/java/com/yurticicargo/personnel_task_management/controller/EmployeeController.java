@@ -2,6 +2,7 @@ package com.yurticicargo.personnel_task_management.controller;
 
 import com.yurticicargo.personnel_task_management.entity.Employee;
 import com.yurticicargo.personnel_task_management.service.EmployeeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +17,7 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
     @PostMapping
-    public ResponseEntity<Employee> create(@RequestBody Employee employee) {
+    public ResponseEntity<Employee> create(@Valid @RequestBody Employee employee) {
         return ResponseEntity.ok(employeeService.save(employee));
     }
 
@@ -36,7 +37,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Employee> update(@PathVariable Long id, @RequestBody Employee employee) {
+    public ResponseEntity<Employee> update(@PathVariable Long id, @Valid @RequestBody Employee employee) {
         return ResponseEntity.ok(employeeService.update(id, employee));
     }
 

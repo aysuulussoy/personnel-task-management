@@ -1,6 +1,8 @@
 package com.yurticicargo.personnel_task_management.service;
 
 import com.yurticicargo.personnel_task_management.entity.Employee;
+import com.yurticicargo.personnel_task_management.exception.ForbiddenOperationException;
+import com.yurticicargo.personnel_task_management.exception.ResourceNotFoundException;
 import com.yurticicargo.personnel_task_management.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,7 @@ public class EmployeeService {
 
     public Employee findById(Long id) {
         return employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found: " + id));
     }
 
     @Transactional
@@ -37,7 +39,7 @@ public class EmployeeService {
         Employee existingEmployee = findById(id);
 
         if (Boolean.FALSE.equals(existingEmployee.getActive())) {
-            throw new RuntimeException("Inactive employee cannot be updated: " + id);
+            throw new ForbiddenOperationException("Inactive employee cannot be updated: " + id);
         }
 
         existingEmployee.setFullName(newEmployee.getFullName());

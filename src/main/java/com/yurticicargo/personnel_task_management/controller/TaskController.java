@@ -3,6 +3,7 @@ package com.yurticicargo.personnel_task_management.controller;
 import com.yurticicargo.personnel_task_management.entity.Task;
 import com.yurticicargo.personnel_task_management.entity.TaskStatus;
 import com.yurticicargo.personnel_task_management.service.TaskService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,7 @@ public class TaskController {
     public ResponseEntity<Task> assignTask(
             @RequestHeader("manager-id") Long managerId,
             @RequestParam Long employeeId,
-            @RequestBody Task task) {
+            @Valid @RequestBody Task task) {
         return ResponseEntity.ok(taskService.assignTask(managerId, employeeId, task));
     }
 
