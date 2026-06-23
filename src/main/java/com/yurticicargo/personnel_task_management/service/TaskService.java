@@ -7,6 +7,7 @@ import com.yurticicargo.personnel_task_management.entity.TaskStatus;
 import com.yurticicargo.personnel_task_management.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final EmployeeService employeeService;
 
+    @Transactional
     public Task assignTask(Long managerId, Long employeeId, Task task) {
         Employee manager = employeeService.findById(managerId);
         Employee employee = employeeService.findById(employeeId);
@@ -26,14 +28,22 @@ public class TaskService {
             throw new RuntimeException("Only managers can assign tasks.");
         }
 
+        if (Boolean.FALSE.equals(manager.getActive())) {
+            throw new RuntimeException("Inactive manager cannot assign tasks: " + managerId);
+        }
+
+        if (Boolean.FALSE.equals(employee.getActive())) {
+            throw new RuntimeException("Task cannot be assigned to an inactive employee: " + employeeId);
+        }
+
         task.setAssignedByManager(manager);
         task.setAssignedEmployee(employee);
         task.setStatus(TaskStatus.NEW);
-        task.setCreatedAt(LocalDateTime.now());
 
         return taskRepository.save(task);
     }
 
+    @Transactional
     public Task updateStatus(Long taskId, Long employeeId, TaskStatus newStatus) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found: " + taskId));
@@ -42,7 +52,20 @@ public class TaskService {
             throw new RuntimeException("Only the assigned employee can update this task.");
         }
 
+        if (Boolean.FALSE.equals(task.getAssignedEmployee().getActive())) {
+            throw new RuntimeException("Inactive employee cannot update task status: " + employeeId);
+        }
+
+        if (newStatus == TaskStatus.COMPLETED && task.getCompletedAt() == null) {
+            task.setCompletedAt(LocalDateTime.now());
+        }
+
+        if (newStatus != TaskStatus.COMPLETED) {
+            task.setCompletedAt(null);
+        }
+
         task.setStatus(newStatus);
+
         return taskRepository.save(task);
     }
 
@@ -51,6 +74,6 @@ public class TaskService {
     }
 
     public List<Task> findCompletedTasks(LocalDateTime startDate, LocalDateTime endDate) {
-        return taskRepository.findByStatusAndCreatedAtBetween(TaskStatus.COMPLETED, startDate, endDate);
+        return taskRepository.findByStatusAndCompletedAtBetween(TaskStatus.COMPLETED, startDate, endDate);
     }
 }

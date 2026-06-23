@@ -4,6 +4,7 @@ import com.yurticicargo.personnel_task_management.entity.Task;
 import com.yurticicargo.personnel_task_management.entity.TaskStatus;
 import com.yurticicargo.personnel_task_management.service.TaskService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,8 +41,8 @@ public class TaskController {
 
     @GetMapping("/report")
     public ResponseEntity<List<Task>> completedTasks(
-            @RequestParam LocalDateTime startDate,
-            @RequestParam LocalDateTime endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         return ResponseEntity.ok(taskService.findCompletedTasks(startDate, endDate));
     }
 }
