@@ -2,33 +2,34 @@ package com.yurticicargo.personnel_task_management.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "gorev")
+@Table(name = "tasks")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Gorev {
+public class Task {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String baslik;
-    private String aciklama;
+    private String title;
+    private String description;
 
     @Enumerated(EnumType.STRING)
-    private GorevStatu statu;
+    private TaskStatus status;
 
     @ManyToOne
-    @JoinColumn(name = "atanan_personel_id")
-    private Personel atananPersonel;
+    @JoinColumn(name = "assigned_employee_id")
+    private Employee assignedEmployee;
 
     @ManyToOne
-    @JoinColumn(name = "atayan_yonetici_id")
-    private Personel atayanYonetici;
+    @JoinColumn(name = "assigned_by_manager_id")
+    private Employee assignedByManager;
 
-    private LocalDateTime olusturulmaTarihi;
+    private LocalDateTime createdAt;
 }

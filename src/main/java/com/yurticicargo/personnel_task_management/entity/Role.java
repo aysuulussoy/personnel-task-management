@@ -1,6 +1,6 @@
 package com.yurticicargo.personnel_task_management.entity;
 
 public enum Role {
-    YONETICI,
-    CALISAN
+    MANAGER,
+    EMPLOYEE
 }
