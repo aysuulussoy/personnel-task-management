@@ -1,5 +1,6 @@
 package com.yurticicargo.personnel_task_management.report;
 
+import com.yurticicargo.personnel_task_management.dto.ReportSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +17,11 @@ import java.time.LocalDateTime;
 public class ReportController {
 
     private final ReportService reportService;
+
+    @GetMapping("/summary")
+    public ResponseEntity<ReportSummaryResponse> getSummary() {
+        return ResponseEntity.ok(reportService.getSummary());
+    }
 
     @GetMapping("/completed-tasks/export")
     public ResponseEntity<byte[]> exportCompletedTasks(

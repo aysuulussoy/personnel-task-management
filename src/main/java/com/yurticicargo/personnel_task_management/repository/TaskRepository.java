@@ -10,4 +10,6 @@ import java.util.List;
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
     List<Task> findByStatusAndCompletedAtBetween(TaskStatus status, LocalDateTime startDate, LocalDateTime endDate);
+
+    long countByStatus(TaskStatus status);
 }

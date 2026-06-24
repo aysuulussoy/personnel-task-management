@@ -1,8 +1,10 @@
 package com.yurticicargo.personnel_task_management.report;
 
+import com.yurticicargo.personnel_task_management.dto.ReportSummaryResponse;
 import com.yurticicargo.personnel_task_management.entity.Employee;
 import com.yurticicargo.personnel_task_management.entity.Task;
 import com.yurticicargo.personnel_task_management.entity.TaskStatus;
+import com.yurticicargo.personnel_task_management.repository.EmployeeRepository;
 import com.yurticicargo.personnel_task_management.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,30 @@ public class ReportService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final TaskRepository taskRepository;
+    private final EmployeeRepository employeeRepository;
+
+    public ReportSummaryResponse getSummary() {
+        long totalEmployees = employeeRepository.count();
+        long activeEmployees = employeeRepository.countByActiveTrue();
+        long inactiveEmployees = employeeRepository.countByActiveFalse();
+
+        long totalTasks = taskRepository.count();
+        long newTasks = taskRepository.countByStatus(TaskStatus.NEW);
+        long inProgressTasks = taskRepository.countByStatus(TaskStatus.IN_PROGRESS);
+        long completedTasks = taskRepository.countByStatus(TaskStatus.COMPLETED);
+        long canceledTasks = taskRepository.countByStatus(TaskStatus.CANCELED);
+
+        return new ReportSummaryResponse(
+                totalEmployees,
+                activeEmployees,
+                inactiveEmployees,
+                totalTasks,
+                newTasks,
+                inProgressTasks,
+                completedTasks,
+                canceledTasks
+        );
+    }
 
     public String generateCompletedTasksCsv(LocalDateTime startDate, LocalDateTime endDate) {
         if (startDate.isAfter(endDate)) {
