@@ -1,6 +1,7 @@
 package com.yurticicargo.personnel_task_management.controller;
 
-import com.yurticicargo.personnel_task_management.entity.Task;
+import com.yurticicargo.personnel_task_management.dto.TaskRequest;
+import com.yurticicargo.personnel_task_management.dto.TaskResponse;
 import com.yurticicargo.personnel_task_management.entity.TaskStatus;
 import com.yurticicargo.personnel_task_management.service.TaskService;
 import jakarta.validation.Valid;
@@ -20,15 +21,15 @@ public class TaskController {
     private final TaskService taskService;
 
     @PostMapping("/assign")
-    public ResponseEntity<Task> assignTask(
+    public ResponseEntity<TaskResponse> assignTask(
             @RequestHeader("manager-id") Long managerId,
             @RequestParam Long employeeId,
-            @Valid @RequestBody Task task) {
-        return ResponseEntity.ok(taskService.assignTask(managerId, employeeId, task));
+            @Valid @RequestBody TaskRequest request) {
+        return ResponseEntity.ok(taskService.assignTask(managerId, employeeId, request));
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Task> updateStatus(
+    public ResponseEntity<TaskResponse> updateStatus(
             @PathVariable Long id,
             @RequestHeader("employee-id") Long employeeId,
             @RequestParam TaskStatus newStatus) {
@@ -36,12 +37,12 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Task>> findAll() {
+    public ResponseEntity<List<TaskResponse>> findAll() {
         return ResponseEntity.ok(taskService.findAll());
     }
 
     @GetMapping("/report")
-    public ResponseEntity<List<Task>> completedTasks(
+    public ResponseEntity<List<TaskResponse>> completedTasks(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         return ResponseEntity.ok(taskService.findCompletedTasks(startDate, endDate));

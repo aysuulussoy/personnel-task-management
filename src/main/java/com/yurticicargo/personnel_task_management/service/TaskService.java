@@ -1,5 +1,7 @@
 package com.yurticicargo.personnel_task_management.service;
 
+import com.yurticicargo.personnel_task_management.dto.TaskRequest;
+import com.yurticicargo.personnel_task_management.dto.TaskResponse;
 import com.yurticicargo.personnel_task_management.entity.Employee;
 import com.yurticicargo.personnel_task_management.entity.Role;
 import com.yurticicargo.personnel_task_management.entity.Task;
@@ -22,7 +24,7 @@ public class TaskService {
     private final EmployeeService employeeService;
 
     @Transactional
-    public Task assignTask(Long managerId, Long employeeId, Task task) {
+    public TaskResponse assignTask(Long managerId, Long employeeId, TaskRequest request) {
         Employee manager = employeeService.findById(managerId);
         Employee employee = employeeService.findById(employeeId);
 
@@ -38,17 +40,19 @@ public class TaskService {
             throw new ForbiddenOperationException("Task cannot be assigned to an inactive employee: " + employeeId);
         }
 
+        Task task = mapToEntity(request);
         task.setAssignedByManager(manager);
         task.setAssignedEmployee(employee);
         task.setStatus(TaskStatus.NEW);
 
-        return taskRepository.save(task);
+        Task savedTask = taskRepository.save(task);
+
+        return mapToResponse(savedTask);
     }
 
     @Transactional
-    public Task updateStatus(Long taskId, Long employeeId, TaskStatus newStatus) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
+    public TaskResponse updateStatus(Long taskId, Long employeeId, TaskStatus newStatus) {
+        Task task = findById(taskId);
 
         if (!task.getAssignedEmployee().getId().equals(employeeId)) {
             throw new ForbiddenOperationException("Only the assigned employee can update this task.");
@@ -68,14 +72,55 @@ public class TaskService {
 
         task.setStatus(newStatus);
 
-        return taskRepository.save(task);
+        Task updatedTask = taskRepository.save(task);
+
+        return mapToResponse(updatedTask);
     }
 
-    public List<Task> findAll() {
-        return taskRepository.findAll();
+    public List<TaskResponse> findAll() {
+        return taskRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
-    public List<Task> findCompletedTasks(LocalDateTime startDate, LocalDateTime endDate) {
-        return taskRepository.findByStatusAndCompletedAtBetween(TaskStatus.COMPLETED, startDate, endDate);
+    public List<TaskResponse> findCompletedTasks(LocalDateTime startDate, LocalDateTime endDate) {
+        return taskRepository.findByStatusAndCompletedAtBetween(TaskStatus.COMPLETED, startDate, endDate)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    private Task findById(Long id) {
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + id));
+    }
+
+    private Task mapToEntity(TaskRequest request) {
+        Task task = new Task();
+
+        task.setTitle(request.getTitle());
+        task.setDescription(request.getDescription());
+
+        return task;
+    }
+
+    private TaskResponse mapToResponse(Task task) {
+        Employee assignedEmployee = task.getAssignedEmployee();
+        Employee assignedByManager = task.getAssignedByManager();
+
+        return new TaskResponse(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getStatus(),
+                assignedEmployee != null ? assignedEmployee.getId() : null,
+                assignedEmployee != null ? assignedEmployee.getFullName() : null,
+                assignedByManager != null ? assignedByManager.getId() : null,
+                assignedByManager != null ? assignedByManager.getFullName() : null,
+                task.getCreatedAt(),
+                task.getUpdatedAt(),
+                task.getCompletedAt()
+        );
     }
 }
