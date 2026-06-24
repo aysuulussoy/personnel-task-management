@@ -1,6 +1,7 @@
 package com.yurticicargo.personnel_task_management.controller;
 
-import com.yurticicargo.personnel_task_management.entity.Employee;
+import com.yurticicargo.personnel_task_management.dto.EmployeeRequest;
+import com.yurticicargo.personnel_task_management.dto.EmployeeResponse;
 import com.yurticicargo.personnel_task_management.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,28 +18,30 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
     @PostMapping
-    public ResponseEntity<Employee> create(@Valid @RequestBody Employee employee) {
-        return ResponseEntity.ok(employeeService.save(employee));
+    public ResponseEntity<EmployeeResponse> create(@Valid @RequestBody EmployeeRequest request) {
+        return ResponseEntity.ok(employeeService.create(request));
     }
 
     @GetMapping
-    public ResponseEntity<List<Employee>> findAll() {
+    public ResponseEntity<List<EmployeeResponse>> findAll() {
         return ResponseEntity.ok(employeeService.findAll());
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<Employee>> findActiveEmployees() {
+    public ResponseEntity<List<EmployeeResponse>> findActiveEmployees() {
         return ResponseEntity.ok(employeeService.findActiveEmployees());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Employee> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(employeeService.findById(id));
+    public ResponseEntity<EmployeeResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.findResponseById(id));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Employee> update(@PathVariable Long id, @Valid @RequestBody Employee employee) {
-        return ResponseEntity.ok(employeeService.update(id, employee));
+    public ResponseEntity<EmployeeResponse> update(
+            @PathVariable Long id,
+            @Valid @RequestBody EmployeeRequest request) {
+        return ResponseEntity.ok(employeeService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

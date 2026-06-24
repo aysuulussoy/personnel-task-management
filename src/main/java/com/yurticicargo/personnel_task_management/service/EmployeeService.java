@@ -1,5 +1,7 @@
 package com.yurticicargo.personnel_task_management.service;
 
+import com.yurticicargo.personnel_task_management.dto.EmployeeRequest;
+import com.yurticicargo.personnel_task_management.dto.EmployeeResponse;
 import com.yurticicargo.personnel_task_management.entity.Employee;
 import com.yurticicargo.personnel_task_management.exception.ForbiddenOperationException;
 import com.yurticicargo.personnel_task_management.exception.ResourceNotFoundException;
@@ -16,17 +18,31 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
 
-    public Employee save(Employee employee) {
-        employee.setActive(true);
-        return employeeRepository.save(employee);
+    public EmployeeResponse create(EmployeeRequest request) {
+        Employee employee = mapToEntity(request);
+        Employee savedEmployee = employeeRepository.save(employee);
+
+        return mapToResponse(savedEmployee);
     }
 
-    public List<Employee> findAll() {
-        return employeeRepository.findAll();
+    public List<EmployeeResponse> findAll() {
+        return employeeRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
-    public List<Employee> findActiveEmployees() {
-        return employeeRepository.findByActiveTrue();
+    public List<EmployeeResponse> findActiveEmployees() {
+        return employeeRepository.findByActiveTrue()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public EmployeeResponse findResponseById(Long id) {
+        Employee employee = findById(id);
+
+        return mapToResponse(employee);
     }
 
     public Employee findById(Long id) {
@@ -35,24 +51,50 @@ public class EmployeeService {
     }
 
     @Transactional
-    public Employee update(Long id, Employee newEmployee) {
+    public EmployeeResponse update(Long id, EmployeeRequest request) {
         Employee existingEmployee = findById(id);
 
         if (Boolean.FALSE.equals(existingEmployee.getActive())) {
             throw new ForbiddenOperationException("Inactive employee cannot be updated: " + id);
         }
 
-        existingEmployee.setFullName(newEmployee.getFullName());
-        existingEmployee.setEmail(newEmployee.getEmail());
-        existingEmployee.setRole(newEmployee.getRole());
+        existingEmployee.setFullName(request.getFullName());
+        existingEmployee.setEmail(request.getEmail());
+        existingEmployee.setRole(request.getRole());
 
-        return employeeRepository.save(existingEmployee);
+        Employee updatedEmployee = employeeRepository.save(existingEmployee);
+
+        return mapToResponse(updatedEmployee);
     }
 
     @Transactional
     public void delete(Long id) {
         Employee existingEmployee = findById(id);
         existingEmployee.setActive(false);
+
         employeeRepository.save(existingEmployee);
+    }
+
+    private Employee mapToEntity(EmployeeRequest request) {
+        Employee employee = new Employee();
+
+        employee.setFullName(request.getFullName());
+        employee.setEmail(request.getEmail());
+        employee.setRole(request.getRole());
+        employee.setActive(true);
+
+        return employee;
+    }
+
+    private EmployeeResponse mapToResponse(Employee employee) {
+        return new EmployeeResponse(
+                employee.getId(),
+                employee.getFullName(),
+                employee.getEmail(),
+                employee.getRole(),
+                employee.getActive(),
+                employee.getCreatedAt(),
+                employee.getUpdatedAt()
+        );
     }
 }
