@@ -1,6 +1,7 @@
-package com.yurticicargo.personnel_task_management.report;
+package com.yurticicargo.personnel_task_management.controller;
 
 import com.yurticicargo.personnel_task_management.dto.ReportSummaryResponse;
+import com.yurticicargo.personnel_task_management.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;

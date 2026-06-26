@@ -1,4 +1,4 @@
-package com.yurticicargo.personnel_task_management.report;
+package com.yurticicargo.personnel_task_management.service;
 
 import com.yurticicargo.personnel_task_management.dto.ReportSummaryResponse;
 import com.yurticicargo.personnel_task_management.entity.Employee;
