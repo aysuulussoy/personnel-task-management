@@ -91,6 +91,18 @@ To stop the containers:
 ```bash
 docker compose down
 ```
+## Security
+
+The project uses Spring Security with Basic Authentication.
+
+Test users:
+
+```text
+manager / manager123 -> MANAGER role
+employee / employee123 -> EMPLOYEE role
+```
+
+Manager users can access employee management, task assignment, and report endpoints. Employee users can access allowed task endpoints but cannot access manager-only endpoints such as reports or task assignment.
 
 ## API Endpoints
 
