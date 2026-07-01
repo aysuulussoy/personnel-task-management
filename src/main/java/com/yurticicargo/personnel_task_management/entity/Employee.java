@@ -27,6 +27,11 @@ public class Employee {
     @Email(message = "Email should be valid")
     private String email;
 
+    @Column(unique = true)
+    private String username;
+
+    private String passwordHash;
+
     @NotNull(message = "Role is required")
     @Enumerated(EnumType.STRING)
     private Role role;
