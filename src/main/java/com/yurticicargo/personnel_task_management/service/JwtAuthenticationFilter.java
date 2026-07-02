@@ -2,6 +2,7 @@ package com.yurticicargo.personnel_task_management.security;
 
 import com.yurticicargo.personnel_task_management.entity.Employee;
 import com.yurticicargo.personnel_task_management.repository.EmployeeRepository;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,22 +44,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.substring(7);
-        String username = jwtService.extractUsername(token);
+        try {
+            String token = authHeader.substring(7);
+            String username = jwtService.extractUsername(token);
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            Employee employee = employeeRepository.findByUsername(username).orElse(null);
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                Employee employee = employeeRepository.findByUsername(username).orElse(null);
 
-            if (employee != null && jwtService.isTokenValid(token, employee) && Boolean.TRUE.equals(employee.getActive())) {
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + employee.getRole().name());
+                if (employee != null && jwtService.isTokenValid(token, employee) && Boolean.TRUE.equals(employee.getActive())) {
+                    SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + employee.getRole().name());
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(employee, null, List.of(authority));
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(employee, null, List.of(authority));
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (JwtException | IllegalArgumentException exception) {
+            SecurityContextHolder.clearContext();
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired JWT token");
+        }
     }
 }
