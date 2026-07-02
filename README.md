@@ -150,7 +150,22 @@ POST /api/auth/register       -> MANAGER only
 POST /api/tasks/assign        -> MANAGER only
 GET/PATCH/PUT /api/tasks/**   -> MANAGER or EMPLOYEE
 ```
+## Swagger / OpenAPI Documentation
 
+Swagger UI was added to make the API endpoints easier to view and test.
+
+After running the application, Swagger UI can be accessed from:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+The project uses JWT authentication. To test protected endpoints in Swagger UI:
+
+1. Login from `/api/auth/login` and copy the returned token.
+2. Click the `Authorize` button in Swagger UI.
+3. Paste the JWT token into the authorization field.
+4. Test protected endpoints with the authorized token.
 ## API Endpoints
 
 ### Authentication Endpoints
