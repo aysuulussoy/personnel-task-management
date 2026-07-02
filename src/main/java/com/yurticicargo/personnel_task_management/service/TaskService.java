@@ -83,7 +83,12 @@ public class TaskService {
                 .map(this::mapToResponse)
                 .toList();
     }
-
+    public List<TaskResponse> findByAssignedEmployeeId(Long employeeId) {
+        return taskRepository.findByAssignedEmployee_Id(employeeId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
     public List<TaskResponse> findCompletedTasks(LocalDateTime startDate, LocalDateTime endDate) {
         return taskRepository.findByStatusAndCompletedAtBetween(TaskStatus.COMPLETED, startDate, endDate)
                 .stream()

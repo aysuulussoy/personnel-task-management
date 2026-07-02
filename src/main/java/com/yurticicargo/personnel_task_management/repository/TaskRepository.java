@@ -11,5 +11,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     List<Task> findByStatusAndCompletedAtBetween(TaskStatus status, LocalDateTime startDate, LocalDateTime endDate);
 
+    List<Task> findByAssignedEmployee_Id(Long employeeId);
+
     long countByStatus(TaskStatus status);
 }
