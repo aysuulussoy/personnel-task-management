@@ -40,6 +40,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST, "/api/tasks/assign").hasRole("MANAGER")
                         .requestMatchers(HttpMethod.GET, "/api/tasks").hasRole("MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/api/tasks/report").hasRole("MANAGER")
                         .requestMatchers(HttpMethod.GET, "/api/tasks/my").hasAnyRole("MANAGER", "EMPLOYEE")
                         .requestMatchers(HttpMethod.PATCH, "/api/tasks/**").hasAnyRole("MANAGER", "EMPLOYEE")
 
