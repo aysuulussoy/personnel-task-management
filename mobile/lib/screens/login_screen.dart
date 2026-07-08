@@ -12,10 +12,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _usernameController =
-      TextEditingController(text: 'manager');
-  final TextEditingController _passwordController =
-      TextEditingController(text: 'manager123');
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   final AuthService _authService = AuthService();
 
@@ -23,16 +21,23 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   Future<void> _login() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() {
+        _error = 'Please enter username and password.';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final result = await _authService.login(
-        _usernameController.text.trim(),
-        _passwordController.text.trim(),
-      );
+      final result = await _authService.login(username, password);
 
       if (!mounted) return;
 
@@ -52,12 +57,12 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-        if (!mounted) return;
+      if (!mounted) return;
 
-        setState(() {
-          _error = e.toString();
-        });
-      } finally {
+      setState(() {
+        _error = 'Login failed. Please check your username and password.';
+      });
+    } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -110,6 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'Password',
                     border: OutlineInputBorder(),
                   ),
+                  onSubmitted: (_) => _isLoading ? null : _login(),
                 ),
                 const SizedBox(height: 16),
                 if (_error != null)
