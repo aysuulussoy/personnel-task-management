@@ -19,8 +19,6 @@ Future<AuthResponse> login(String username, String password) async {
     }),
   );
 
-  print('Login status code: ${response.statusCode}');
-  print('Login response body: ${response.body}');
 
   if (response.statusCode == 200) {
     final data = AuthResponse.fromJson(jsonDecode(response.body));
