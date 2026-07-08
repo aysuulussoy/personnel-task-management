@@ -13,6 +13,9 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,10 +54,10 @@ class PersonnelTaskManagementApplicationTests {
 	@Test
 	void managerShouldRegisterEmployeeAndAssignTask() throws Exception {
 		String managerToken = loginAndGetToken("manager", "manager123");
-		Long employeeId = registerTestEmployee(managerToken);
+		TestEmployee employee = registerTestEmployee(managerToken);
 
 		mockMvc.perform(post("/api/tasks/assign")
-						.param("employeeId", employeeId.toString())
+						.param("employeeId", employee.id().toString())
 						.header("Authorization", "Bearer " + managerToken)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
@@ -67,26 +70,25 @@ class PersonnelTaskManagementApplicationTests {
 				.andExpect(jsonPath("$.id", notNullValue()))
 				.andExpect(jsonPath("$.title").value("Integration test task"))
 				.andExpect(jsonPath("$.status").value("NEW"))
-				.andExpect(jsonPath("$.assignedEmployeeId").value(employeeId))
+				.andExpect(jsonPath("$.assignedEmployeeId").value(employee.id()))
 				.andExpect(jsonPath("$.assignedByManagerName").value("System Manager"));
 	}
 
 	@Test
 	void employeeShouldSeeOwnTasksButCannotSeeAllTasks() throws Exception {
 		String managerToken = loginAndGetToken("manager", "manager123");
-		Long employeeId = registerTestEmployee(managerToken);
-		String username = getLastCreatedUsername(employeeId);
+		TestEmployee employee = registerTestEmployee(managerToken);
 
-		Long taskId = assignTestTask(managerToken, employeeId);
+		Long taskId = assignTestTask(managerToken, employee.id());
 
-		String employeeToken = loginAndGetToken(username, "employee123");
+		String employeeToken = loginAndGetToken(employee.username(), "employee123");
 
 		mockMvc.perform(get("/api/tasks/my")
 						.header("Authorization", "Bearer " + employeeToken))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$", hasSize(1)))
 				.andExpect(jsonPath("$[0].id").value(taskId))
-				.andExpect(jsonPath("$[0].assignedEmployeeId").value(employeeId))
+				.andExpect(jsonPath("$[0].assignedEmployeeId").value(employee.id()))
 				.andExpect(jsonPath("$[0].status").value("NEW"));
 
 		mockMvc.perform(get("/api/tasks")
@@ -97,12 +99,11 @@ class PersonnelTaskManagementApplicationTests {
 	@Test
 	void assignedEmployeeShouldCompleteOwnTask() throws Exception {
 		String managerToken = loginAndGetToken("manager", "manager123");
-		Long employeeId = registerTestEmployee(managerToken);
-		String username = getLastCreatedUsername(employeeId);
+		TestEmployee employee = registerTestEmployee(managerToken);
 
-		Long taskId = assignTestTask(managerToken, employeeId);
+		Long taskId = assignTestTask(managerToken, employee.id());
 
-		String employeeToken = loginAndGetToken(username, "employee123");
+		String employeeToken = loginAndGetToken(employee.username(), "employee123");
 
 		mockMvc.perform(patch("/api/tasks/{id}/status", taskId)
 						.param("newStatus", "COMPLETED")
@@ -111,6 +112,74 @@ class PersonnelTaskManagementApplicationTests {
 				.andExpect(jsonPath("$.id").value(taskId))
 				.andExpect(jsonPath("$.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.completedAt", notNullValue()));
+	}
+
+	@Test
+	void managerShouldLoadEmployeeList() throws Exception {
+		String managerToken = loginAndGetToken("manager", "manager123");
+		TestEmployee employee = registerTestEmployee(managerToken);
+
+		String responseBody = mockMvc.perform(get("/api/employees")
+						.header("Authorization", "Bearer " + managerToken))
+				.andExpect(status().isOk())
+				.andReturn()
+				.getResponse()
+				.getContentAsString();
+
+		JsonNode employees = objectMapper.readTree(responseBody);
+
+		boolean foundEmployee = false;
+
+		for (JsonNode employeeNode : employees) {
+			if (employeeNode.get("id").asLong() == employee.id()) {
+				foundEmployee = true;
+
+				assertEquals("Test Employee", employeeNode.get("fullName").asText());
+				assertEquals("EMPLOYEE", employeeNode.get("role").asText());
+				assertEquals(employee.email(), employeeNode.get("email").asText());
+				assertNotNull(employeeNode.get("active"));
+				assertTrue(employeeNode.get("active").asBoolean());
+
+				break;
+			}
+		}
+
+		assertTrue(foundEmployee, "Registered test employee should be listed for manager.");
+	}
+
+	@Test
+	void managerShouldLoadAllTasks() throws Exception {
+		String managerToken = loginAndGetToken("manager", "manager123");
+		TestEmployee employee = registerTestEmployee(managerToken);
+		Long taskId = assignTestTask(managerToken, employee.id());
+
+		String responseBody = mockMvc.perform(get("/api/tasks")
+						.header("Authorization", "Bearer " + managerToken))
+				.andExpect(status().isOk())
+				.andReturn()
+				.getResponse()
+				.getContentAsString();
+
+		JsonNode tasks = objectMapper.readTree(responseBody);
+
+		boolean foundTask = false;
+
+		for (JsonNode taskNode : tasks) {
+			if (taskNode.get("id").asLong() == taskId) {
+				foundTask = true;
+
+				assertEquals("Integration test task", taskNode.get("title").asText());
+				assertEquals("Task created during backend integration test.", taskNode.get("description").asText());
+				assertEquals("NEW", taskNode.get("status").asText());
+				assertEquals(employee.id(), taskNode.get("assignedEmployeeId").asLong());
+				assertEquals("Test Employee", taskNode.get("assignedEmployeeName").asText());
+				assertEquals("System Manager", taskNode.get("assignedByManagerName").asText());
+
+				break;
+			}
+		}
+
+		assertTrue(foundTask, "Assigned test task should be listed for manager.");
 	}
 
 	private String loginAndGetToken(String username, String password) throws Exception {
@@ -131,7 +200,7 @@ class PersonnelTaskManagementApplicationTests {
 		return responseJson.get("token").asText();
 	}
 
-	private Long registerTestEmployee(String managerToken) throws Exception {
+	private TestEmployee registerTestEmployee(String managerToken) throws Exception {
 		String uniqueUsername = "test_employee_" + UUID.randomUUID().toString().substring(0, 8);
 		String uniqueEmail = uniqueUsername + "@yurticikargo.com";
 
@@ -150,17 +219,20 @@ class PersonnelTaskManagementApplicationTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id", notNullValue()))
 				.andExpect(jsonPath("$.username").value(uniqueUsername))
+				.andExpect(jsonPath("$.email").value(uniqueEmail))
+				.andExpect(jsonPath("$.fullName").value("Test Employee"))
 				.andExpect(jsonPath("$.role").value("EMPLOYEE"))
 				.andReturn()
 				.getResponse()
 				.getContentAsString();
 
 		JsonNode responseJson = objectMapper.readTree(responseBody);
-		Long employeeId = responseJson.get("id").asLong();
 
-		TestUserStore.lastCreatedUsername = uniqueUsername;
-
-		return employeeId;
+		return new TestEmployee(
+				responseJson.get("id").asLong(),
+				uniqueUsername,
+				uniqueEmail
+		);
 	}
 
 	private Long assignTestTask(String managerToken, Long employeeId) throws Exception {
@@ -185,11 +257,6 @@ class PersonnelTaskManagementApplicationTests {
 		return responseJson.get("id").asLong();
 	}
 
-	private String getLastCreatedUsername(Long employeeId) {
-		return TestUserStore.lastCreatedUsername;
-	}
-
-	private static class TestUserStore {
-		private static String lastCreatedUsername;
+	private record TestEmployee(Long id, String username, String email) {
 	}
 }
