@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/current_user_model.dart';
 import '../models/employee_model.dart';
 import '../models/task_model.dart';
 import '../services/auth_service.dart';
@@ -15,11 +16,14 @@ class ManagerDashboardScreen extends StatefulWidget {
 }
 
 class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
+  final AuthService _authService = AuthService();
   final EmployeeService _employeeService = EmployeeService();
   final TaskService _taskService = TaskService();
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+
+  CurrentUserModel? _currentUser;
 
   List<EmployeeModel> _employees = [];
   List<TaskModel> _tasks = [];
@@ -43,12 +47,14 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
     });
 
     try {
+      final currentUser = await _authService.getCurrentUser();
       final employees = await _employeeService.getEmployees();
       final tasks = await _taskService.getAllTasks();
 
       if (!mounted) return;
 
       setState(() {
+        _currentUser = currentUser;
         _employees = employees;
         _tasks = tasks;
         _selectedEmployee = null;
@@ -113,7 +119,7 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
   }
 
   Future<void> _logout() async {
-    await AuthService().logout();
+    await _authService.logout();
 
     if (!mounted) return;
 
@@ -129,6 +135,16 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  String get _managerWelcomeText {
+    final fullName = _currentUser?.fullName;
+
+    if (fullName == null || fullName.trim().isEmpty) {
+      return 'Welcome, Manager!';
+    }
+
+    return 'Welcome, $fullName!';
   }
 
   String _formatDate(String? value) {
@@ -176,10 +192,12 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadDashboardData,
+            tooltip: 'Refresh',
           ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -196,6 +214,19 @@ class _ManagerDashboardScreenState extends State<ManagerDashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildSummaryCards(),
+                        const SizedBox(height: 18),
+                        Text(
+                          _managerWelcomeText,
+                          style: const TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'You can assign tasks and follow employee task status here.',
+                          style: TextStyle(fontSize: 13),
+                        ),
                         const SizedBox(height: 20),
                         _buildAssignTaskCard(),
                         const SizedBox(height: 24),
