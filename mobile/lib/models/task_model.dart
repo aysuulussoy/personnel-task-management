@@ -3,10 +3,13 @@ class TaskModel {
   final String title;
   final String description;
   final String status;
+
   final int? assignedEmployeeId;
   final String? assignedEmployeeName;
+
   final int? assignedByManagerId;
   final String? assignedByManagerName;
+
   final String? createdAt;
   final String? updatedAt;
   final String? completedAt;
@@ -28,9 +31,9 @@ class TaskModel {
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     return TaskModel(
       id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      status: json['status'],
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      status: json['status'] ?? '',
       assignedEmployeeId: json['assignedEmployeeId'],
       assignedEmployeeName: json['assignedEmployeeName'],
       assignedByManagerId: json['assignedByManagerId'],

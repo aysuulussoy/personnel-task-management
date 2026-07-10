@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/current_user_model.dart';
 import '../models/task_model.dart';
 import '../services/auth_service.dart';
 import '../services/task_service.dart';
@@ -13,77 +14,142 @@ class EmployeeTasksScreen extends StatefulWidget {
 }
 
 class _EmployeeTasksScreenState extends State<EmployeeTasksScreen> {
+  final AuthService _authService = AuthService();
   final TaskService _taskService = TaskService();
 
-  late Future<List<TaskModel>> _tasksFuture;
-  bool _isUpdating = false;
+  CurrentUserModel? _currentUser;
+  List<TaskModel> _tasks = [];
+
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _tasksFuture = _taskService.getMyTasks();
+    _loadEmployeeData();
   }
 
-  Future<void> _logout(BuildContext context) async {
-    await AuthService().logout();
-
-    if (!context.mounted) return;
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
-    );
-  }
-
-  Future<void> _refreshTasks() async {
+  Future<void> _loadEmployeeData() async {
     setState(() {
-      _tasksFuture = _taskService.getMyTasks();
-    });
-  }
-
-  Future<void> _markAsCompleted(TaskModel task) async {
-    setState(() {
-      _isUpdating = true;
+      _isLoading = true;
+      _error = null;
     });
 
     try {
-      await _taskService.updateTaskStatus(task.id, 'COMPLETED');
-      await _refreshTasks();
+      final currentUser = await _authService.getCurrentUser();
+      final tasks = await _taskService.getMyTasks();
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Task marked as completed.'),
-        ),
-      );
-    } catch (error) {
+      setState(() {
+        _currentUser = currentUser;
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    } catch (_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Task could not be updated.'),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUpdating = false;
-        });
-      }
+      setState(() {
+        _error = 'Failed to load employee data.';
+        _isLoading = false;
+      });
     }
   }
 
-  Widget _buildStatusChip(String status) {
-    return Chip(
-      label: Text(status),
+  Future<void> _markCompleted(TaskModel task) async {
+    try {
+      await _taskService.updateTaskStatus(task.id, 'COMPLETED');
+      _showSnack('Task marked as completed.');
+      await _loadEmployeeData();
+    } catch (_) {
+      _showSnack('Failed to update task.');
+    }
+  }
+
+  Future<void> _logout() async {
+    await _authService.logout();
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String get _welcomeText {
+    final fullName = _currentUser?.fullName;
+
+    if (fullName == null || fullName.trim().isEmpty) {
+      return 'Welcome!';
+    }
+
+    return 'Welcome, $fullName!';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Tasks'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadEmployeeData,
+            tooltip: 'Refresh',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!))
+              : RefreshIndicator(
+                  onRefresh: _loadEmployeeData,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text(
+                        _welcomeText,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${_tasks.length} task(s) assigned to you',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 20),
+                      if (_tasks.isEmpty)
+                        const Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No tasks assigned yet.'),
+                          ),
+                        )
+                      else
+                        ..._tasks.map(_buildTaskCard),
+                    ],
+                  ),
+                ),
     );
   }
 
   Widget _buildTaskCard(TaskModel task) {
-    final bool isCompleted = task.status.toUpperCase() == 'COMPLETED';
+    final isCompleted = task.status == 'COMPLETED';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -95,139 +161,46 @@ class _EmployeeTasksScreenState extends State<EmployeeTasksScreen> {
             Text(
               task.title,
               style: const TextStyle(
-                fontSize: 17,
                 fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               task.description,
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 13),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 const Text(
                   'Status: ',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                _buildStatusChip(task.status),
+                Chip(
+                  label: Text(task.status),
+                  backgroundColor:
+                      isCompleted ? Colors.green.shade100 : Colors.blue.shade100,
+                ),
               ],
             ),
-            if (task.assignedByManagerName != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Assigned by: ${task.assignedByManagerName}',
-                style: const TextStyle(fontSize: 13),
-              ),
-            ],
+            const SizedBox(height: 6),
+            Text(
+              'Assigned by: ${task.assignedByManagerName ?? '-'}',
+              style: const TextStyle(fontSize: 12),
+            ),
             if (!isCompleted) ...[
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isUpdating ? null : () => _markAsCompleted(task),
-                  child: _isUpdating
-                      ? const Text('Updating...')
-                      : const Text('Mark as Completed'),
+                  onPressed: () => _markCompleted(task),
+                  child: const Text('Mark as Completed'),
                 ),
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTaskList(List<TaskModel> tasks) {
-    if (tasks.isEmpty) {
-      return const Center(
-        child: Text(
-          'No tasks assigned yet.',
-          style: TextStyle(fontSize: 16),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _refreshTasks,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            'Welcome, Employee!',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${tasks.length} task(s) assigned to you',
-            style: const TextStyle(fontSize: 14),
-          ),
-          const SizedBox(height: 16),
-          ...tasks.map(_buildTaskCard),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Could not load tasks.',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _refreshTasks,
-              child: const Text('Try Again'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Tasks'),
-        actions: [
-          IconButton(
-            onPressed: _refreshTasks,
-            icon: const Icon(Icons.refresh),
-          ),
-          IconButton(
-            onPressed: () => _logout(context),
-            icon: const Icon(Icons.logout),
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<TaskModel>>(
-        future: _tasksFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          if (snapshot.hasError) {
-            return _buildErrorState();
-          }
-
-          final tasks = snapshot.data ?? [];
-
-          return _buildTaskList(tasks);
-        },
       ),
     );
   }
